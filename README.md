@@ -81,7 +81,9 @@ Go の `text/template` 形式。使える変数: `.Requester` `.Owner` `.Repo` `
 ## 開発
 
 ```sh
-make up    # DynamoDB Local 起動
+cp .env.sample .env   # トークン等を記入(.env は gitignore 済み)
+make up               # DynamoDB Local 起動
+make run              # .env を読み込んで起動
 make test
 make build
 ```
