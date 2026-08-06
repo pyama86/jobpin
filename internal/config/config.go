@@ -11,6 +11,7 @@ import (
 const (
 	defaultNotifyTemplateSuccess = "<@{{.Requester}}> :white_check_mark: *{{.WorkflowName}}* (#{{.RunNumber}}) が成功しました\n{{.RunURL}}"
 	defaultNotifyTemplateFailure = "<@{{.Requester}}> :x: *{{.WorkflowName}}* (#{{.RunNumber}}) が {{.Conclusion}} で終了しました\n{{.RunURL}}"
+	defaultNotifyTemplateTimeout = "<@{{.Requester}}> :hourglass_flowing_sand: {{.RunURL}} は監視期限を超えたため打ち切りました"
 )
 
 type Config struct {
@@ -23,9 +24,11 @@ type Config struct {
 	DynamoDBEndpoint        string        `envconfig:"DYNAMODB_ENDPOINT"`
 	PollInterval            time.Duration `envconfig:"POLL_INTERVAL" default:"30s"`
 	WatchTTL                time.Duration `envconfig:"WATCH_TTL" default:"168h"`
+	MaxWatchDuration        time.Duration `envconfig:"MAX_WATCH_DURATION" default:"1h"`
 	AckReaction             string        `envconfig:"ACK_REACTION" default:"eyes"`
 	NotifyTemplateSuccess   string        `envconfig:"NOTIFY_TEMPLATE_SUCCESS"`
 	NotifyTemplateFailure   string        `envconfig:"NOTIFY_TEMPLATE_FAILURE"`
+	NotifyTemplateTimeout   string        `envconfig:"NOTIFY_TEMPLATE_TIMEOUT"`
 }
 
 func Load() (*Config, error) {
@@ -39,6 +42,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.NotifyTemplateFailure == "" {
 		cfg.NotifyTemplateFailure = defaultNotifyTemplateFailure
+	}
+	if cfg.NotifyTemplateTimeout == "" {
+		cfg.NotifyTemplateTimeout = defaultNotifyTemplateTimeout
 	}
 
 	if cfg.GitHubToken == "" && (cfg.GitHubAppID == 0 || cfg.GitHubAppPrivateKeyPath == "") {

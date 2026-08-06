@@ -29,9 +29,11 @@ func setupEnv(t *testing.T) {
 		"DYNAMODB_ENDPOINT",
 		"POLL_INTERVAL",
 		"WATCH_TTL",
+		"MAX_WATCH_DURATION",
 		"ACK_REACTION",
 		"NOTIFY_TEMPLATE_SUCCESS",
 		"NOTIFY_TEMPLATE_FAILURE",
+		"NOTIFY_TEMPLATE_TIMEOUT",
 	)
 }
 
@@ -85,6 +87,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.WatchTTL != 168*time.Hour {
 		t.Errorf("WatchTTL = %v, want 168h", cfg.WatchTTL)
 	}
+	if cfg.MaxWatchDuration != time.Hour {
+		t.Errorf("MaxWatchDuration = %v, want 1h", cfg.MaxWatchDuration)
+	}
 	if cfg.AckReaction != "eyes" {
 		t.Errorf("AckReaction = %q, want %q", cfg.AckReaction, "eyes")
 	}
@@ -96,5 +101,8 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.NotifyTemplateFailure != defaultNotifyTemplateFailure {
 		t.Errorf("NotifyTemplateFailure = %q, want default", cfg.NotifyTemplateFailure)
+	}
+	if cfg.NotifyTemplateTimeout != defaultNotifyTemplateTimeout {
+		t.Errorf("NotifyTemplateTimeout = %q, want default", cfg.NotifyTemplateTimeout)
 	}
 }
