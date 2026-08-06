@@ -19,6 +19,7 @@ type Config struct {
 	SlackAppToken           string        `envconfig:"SLACK_APP_TOKEN" required:"true"`
 	GitHubToken             string        `envconfig:"GITHUB_TOKEN"`
 	GitHubAppID             int64         `envconfig:"GITHUB_APP_ID"`
+	GitHubAppPrivateKey     string        `envconfig:"GITHUB_APP_PRIVATE_KEY"`
 	GitHubAppPrivateKeyPath string        `envconfig:"GITHUB_APP_PRIVATE_KEY_PATH"`
 	DynamoDBTable           string        `envconfig:"DYNAMODB_TABLE" default:"jobpin"`
 	DynamoDBEndpoint        string        `envconfig:"DYNAMODB_ENDPOINT"`
@@ -47,8 +48,8 @@ func Load() (*Config, error) {
 		cfg.NotifyTemplateTimeout = defaultNotifyTemplateTimeout
 	}
 
-	if cfg.GitHubToken == "" && (cfg.GitHubAppID == 0 || cfg.GitHubAppPrivateKeyPath == "") {
-		return nil, errors.New("GITHUB_TOKEN か GITHUB_APP_ID+GITHUB_APP_PRIVATE_KEY_PATH のどちらかが必要")
+	if cfg.GitHubToken == "" && (cfg.GitHubAppID == 0 || (cfg.GitHubAppPrivateKey == "" && cfg.GitHubAppPrivateKeyPath == "")) {
+		return nil, errors.New("GITHUB_TOKEN か GITHUB_APP_ID+GITHUB_APP_PRIVATE_KEY(_PATH) のどちらかが必要")
 	}
 
 	return &cfg, nil

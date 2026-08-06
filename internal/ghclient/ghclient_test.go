@@ -21,6 +21,16 @@ func TestNewWithPAT(t *testing.T) {
 	}
 }
 
+func TestNewWithInvalidAppPrivateKey(t *testing.T) {
+	_, err := New(&config.Config{
+		GitHubAppID:         12345,
+		GitHubAppPrivateKey: "invalid-pem-data",
+	})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
 func TestTokenClientGetWorkflowRun(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /repos/pyama86/jobpin/actions/runs/42", func(w http.ResponseWriter, r *http.Request) {

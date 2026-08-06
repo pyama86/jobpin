@@ -47,6 +47,7 @@ sequenceDiagram
 | `SLACK_APP_TOKEN` | ✓ | - | App-Level Token (`xapp-`、Socket Mode 用) |
 | `GITHUB_TOKEN` | ※ | - | PAT。設定時は PAT 認証 |
 | `GITHUB_APP_ID` | ※ | - | GitHub App の App ID |
+| `GITHUB_APP_PRIVATE_KEY` | ※ | - | GitHub App の秘密鍵(PEM 本文)。`_PATH` とどちらか一方を指定 |
 | `GITHUB_APP_PRIVATE_KEY_PATH` | ※ | - | GitHub App の秘密鍵ファイルパス |
 | `DYNAMODB_TABLE` | | `jobpin` | テーブル名(無ければ自動作成) |
 | `DYNAMODB_ENDPOINT` | | - | DynamoDB Local 等のエンドポイント |
@@ -58,7 +59,7 @@ sequenceDiagram
 | `NOTIFY_TEMPLATE_FAILURE` | | 下記 | 失敗時の通知テンプレート |
 | `NOTIFY_TEMPLATE_TIMEOUT` | | 下記 | 監視打ち切り時の通知テンプレート |
 
-※ `GITHUB_TOKEN` か `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY_PATH` のどちらかが必須。GitHub App の場合、installation は対象リポジトリから自動解決する。
+※ `GITHUB_TOKEN` か `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY`(または `GITHUB_APP_PRIVATE_KEY_PATH`)のどちらかが必須。GitHub App の場合、installation は対象リポジトリから自動解決する。
 
 AWS 認証は SDK 標準(`AWS_REGION`、`AWS_PROFILE`、IAM ロール等)に従う。
 
