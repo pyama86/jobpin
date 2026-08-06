@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/pyama86/jobpin/internal/ghclient"
 	"github.com/pyama86/jobpin/internal/notify"
 	"github.com/pyama86/jobpin/internal/store"
 	"github.com/slack-go/slack"
 )
+
+const testMaxWatchDuration = time.Hour
 
 type stubStore struct {
 	jobs          []*store.Job
@@ -53,22 +56,23 @@ func (p *stubPoster) PostMessageContext(ctx context.Context, channelID string, o
 
 func newTestWatcher(t *testing.T, st *stubStore, gh *stubGH, poster *stubPoster) *Watcher {
 	t.Helper()
-	renderer, err := notify.NewRenderer("ok {{.Owner}}/{{.Repo}}", "ng {{.Conclusion}}")
+	renderer, err := notify.NewRenderer("ok {{.Owner}}/{{.Repo}}", "ng {{.Conclusion}}", "timeout {{.RunURL}}")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &Watcher{st: st, gh: gh, slack: poster, renderer: renderer}
+	return &Watcher{st: st, gh: gh, slack: poster, renderer: renderer, maxWatchDuration: testMaxWatchDuration}
 }
 
 func testJob() *store.Job {
 	return &store.Job{
-		ID:       "pyama86/jobpin#1#C123#1234.5678",
-		Owner:    "pyama86",
-		Repo:     "jobpin",
-		RunID:    1,
-		Channel:  "C123",
-		ThreadTS: "1234.5678",
-		Status:   store.StatusWatching,
+		ID:        "pyama86/jobpin#1#C123#1234.5678",
+		Owner:     "pyama86",
+		Repo:      "jobpin",
+		RunID:     1,
+		Channel:   "C123",
+		ThreadTS:  "1234.5678",
+		Status:    store.StatusWatching,
+		CreatedAt: time.Now(),
 	}
 }
 
@@ -138,5 +142,36 @@ func TestCheckAllGetRunError(t *testing.T) {
 
 	if st.updatedID != "" {
 		t.Errorf("expected no UpdateStatus on transient error, got %q", st.updatedID)
+	}
+}
+
+func TestCheckAllWatchTimeout(t *testing.T) {
+	job := testJob()
+	job.CreatedAt = time.Now().Add(-2 * testMaxWatchDuration)
+	st := &stubStore{jobs: []*store.Job{job}}
+	gh := &stubGH{err: errors.New("GitHub API should not be called on timeout")}
+	poster := &stubPoster{}
+
+	newTestWatcher(t, st, gh, poster).checkAll(context.Background())
+
+	if len(poster.posted) != 1 || poster.posted[0] != "C123" {
+		t.Errorf("expected 1 timeout post to C123, got %v", poster.posted)
+	}
+	if st.updatedID != job.ID || st.updatedStatus != store.StatusNotified {
+		t.Errorf("expected UpdateStatus(%q, notified), got (%q, %q)", job.ID, st.updatedID, st.updatedStatus)
+	}
+}
+
+func TestCheckAllWatchTimeoutPostFailure(t *testing.T) {
+	job := testJob()
+	job.CreatedAt = time.Now().Add(-2 * testMaxWatchDuration)
+	st := &stubStore{jobs: []*store.Job{job}}
+	gh := &stubGH{err: errors.New("GitHub API should not be called on timeout")}
+	poster := &stubPoster{postErr: errors.New("slack down")}
+
+	newTestWatcher(t, st, gh, poster).checkAll(context.Background())
+
+	if st.updatedID != "" {
+		t.Errorf("expected no UpdateStatus on timeout post failure, got %q", st.updatedID)
 	}
 }

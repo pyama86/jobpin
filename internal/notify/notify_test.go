@@ -9,11 +9,14 @@ import (
 )
 
 func TestNewRendererInvalidTemplate(t *testing.T) {
-	if _, err := NewRenderer("{{.Invalid", "ok"); err == nil {
+	if _, err := NewRenderer("{{.Invalid", "ok", "ok"); err == nil {
 		t.Fatal("expected error for invalid success template")
 	}
-	if _, err := NewRenderer("ok", "{{.Invalid"); err == nil {
+	if _, err := NewRenderer("ok", "{{.Invalid", "ok"); err == nil {
 		t.Fatal("expected error for invalid failure template")
+	}
+	if _, err := NewRenderer("ok", "ok", "{{.Invalid"); err == nil {
+		t.Fatal("expected error for invalid timeout template")
 	}
 }
 
@@ -21,6 +24,7 @@ func TestRender(t *testing.T) {
 	r, err := NewRenderer(
 		"ok <@{{.Requester}}> {{.Owner}}/{{.Repo}} {{.WorkflowName}} #{{.RunNumber}} {{.Branch}} {{.RunURL}}",
 		"ng <@{{.Requester}}> {{.Conclusion}} {{.Status}} run={{.RunID}} {{.RunURL}}",
+		"timeout <@{{.Requester}}> {{.Owner}}/{{.Repo}} run={{.RunID}} {{.RunURL}}",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -77,4 +81,31 @@ func TestRender(t *testing.T) {
 			t.Errorf("expected failure template, got %q", got)
 		}
 	})
+}
+
+func TestRenderTimeout(t *testing.T) {
+	r, err := NewRenderer(
+		"ok",
+		"ng",
+		"timeout <@{{.Requester}}> {{.Owner}}/{{.Repo}} run={{.RunID}} {{.RunURL}}",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	job := &store.Job{
+		Owner:     "pyama86",
+		Repo:      "jobpin",
+		RunID:     123,
+		Requester: "U123",
+	}
+
+	got, err := r.RenderTimeout(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "timeout <@U123> pyama86/jobpin run=123 https://github.com/pyama86/jobpin/actions/runs/123"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
 }

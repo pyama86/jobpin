@@ -52,9 +52,11 @@ sequenceDiagram
 | `DYNAMODB_ENDPOINT` | | - | DynamoDB Local 等のエンドポイント |
 | `POLL_INTERVAL` | | `30s` | 監視間隔 |
 | `WATCH_TTL` | | `168h` | 監視レコードの保持期間 |
+| `MAX_WATCH_DURATION` | | `1h` | 監視の最大時間 |
 | `ACK_REACTION` | | `eyes` | 受付時のリアクション |
 | `NOTIFY_TEMPLATE_SUCCESS` | | 下記 | 成功時の通知テンプレート |
 | `NOTIFY_TEMPLATE_FAILURE` | | 下記 | 失敗時の通知テンプレート |
+| `NOTIFY_TEMPLATE_TIMEOUT` | | 下記 | 監視打ち切り時の通知テンプレート |
 
 ※ `GITHUB_TOKEN` か `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY_PATH` のどちらかが必須。GitHub App の場合、installation は対象リポジトリから自動解決する。
 
@@ -69,6 +71,14 @@ Go の `text/template` 形式。使える変数: `.Requester` `.Owner` `.Repo` `
 ```
 成功: <@{{.Requester}}> :white_check_mark: *{{.WorkflowName}}* (#{{.RunNumber}}) が成功しました\n{{.RunURL}}
 失敗: <@{{.Requester}}> :x: *{{.WorkflowName}}* (#{{.RunNumber}}) が {{.Conclusion}} で終了しました\n{{.RunURL}}
+```
+
+監視打ち切り(`NOTIFY_TEMPLATE_TIMEOUT`)は使える変数が異なり、`.Requester` `.Owner` `.Repo` `.RunID` `.RunURL` のみ。
+
+デフォルト:
+
+```
+打ち切り: <@{{.Requester}}> :hourglass_flowing_sand: {{.RunURL}} は監視期限を超えたため打ち切りました
 ```
 
 ## Slack App の設定

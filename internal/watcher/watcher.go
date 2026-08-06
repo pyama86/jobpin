@@ -21,20 +21,22 @@ type SlackPoster interface {
 }
 
 type Watcher struct {
-	interval time.Duration
-	st       store.Store
-	gh       ghclient.Client
-	slack    SlackPoster
-	renderer *notify.Renderer
+	interval         time.Duration
+	maxWatchDuration time.Duration
+	st               store.Store
+	gh               ghclient.Client
+	slack            SlackPoster
+	renderer         *notify.Renderer
 }
 
 func New(cfg *config.Config, st store.Store, gh ghclient.Client, slackClient SlackPoster, renderer *notify.Renderer) *Watcher {
 	return &Watcher{
-		interval: cfg.PollInterval,
-		st:       st,
-		gh:       gh,
-		slack:    slackClient,
-		renderer: renderer,
+		interval:         cfg.PollInterval,
+		maxWatchDuration: cfg.MaxWatchDuration,
+		st:               st,
+		gh:               gh,
+		slack:            slackClient,
+		renderer:         renderer,
 	}
 }
 
@@ -65,6 +67,11 @@ func (w *Watcher) checkAll(ctx context.Context) {
 }
 
 func (w *Watcher) checkJob(ctx context.Context, job *store.Job) {
+	if time.Since(job.CreatedAt) > w.maxWatchDuration {
+		w.notifyTimeout(ctx, job)
+		return
+	}
+
 	run, err := w.gh.GetWorkflowRun(ctx, job.Owner, job.Repo, job.RunID)
 	if err != nil {
 		if isNotFound(err) {
@@ -91,6 +98,24 @@ func (w *Watcher) checkJob(ctx context.Context, job *store.Job) {
 	if _, _, err := w.slack.PostMessageContext(ctx, job.Channel,
 		slack.MsgOptionText(text, false), slack.MsgOptionTS(job.ThreadTS)); err != nil {
 		slog.Warn("failed to post message", "job", job.ID, "error", err)
+		return
+	}
+
+	if err := w.st.UpdateStatus(ctx, job.ID, store.StatusNotified); err != nil {
+		slog.Warn("failed to update job status", "job", job.ID, "error", err)
+	}
+}
+
+func (w *Watcher) notifyTimeout(ctx context.Context, job *store.Job) {
+	text, err := w.renderer.RenderTimeout(job)
+	if err != nil {
+		slog.Warn("failed to render timeout message", "job", job.ID, "error", err)
+		return
+	}
+
+	if _, _, err := w.slack.PostMessageContext(ctx, job.Channel,
+		slack.MsgOptionText(text, false), slack.MsgOptionTS(job.ThreadTS)); err != nil {
+		slog.Warn("failed to post timeout message", "job", job.ID, "error", err)
 		return
 	}
 

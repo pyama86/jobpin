@@ -48,7 +48,7 @@ func run() error {
 		return err
 	}
 
-	renderer, err := notify.NewRenderer(cfg.NotifyTemplateSuccess, cfg.NotifyTemplateFailure)
+	renderer, err := notify.NewRenderer(cfg.NotifyTemplateSuccess, cfg.NotifyTemplateFailure, cfg.NotifyTemplateTimeout)
 	if err != nil {
 		return err
 	}

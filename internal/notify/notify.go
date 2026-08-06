@@ -12,9 +12,10 @@ import (
 type Renderer struct {
 	success *template.Template
 	failure *template.Template
+	timeout *template.Template
 }
 
-func NewRenderer(successTmpl, failureTmpl string) (*Renderer, error) {
+func NewRenderer(successTmpl, failureTmpl, timeoutTmpl string) (*Renderer, error) {
 	success, err := template.New("success").Parse(successTmpl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse success template: %w", err)
@@ -23,7 +24,11 @@ func NewRenderer(successTmpl, failureTmpl string) (*Renderer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse failure template: %w", err)
 	}
-	return &Renderer{success: success, failure: failure}, nil
+	timeout, err := template.New("timeout").Parse(timeoutTmpl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse timeout template: %w", err)
+	}
+	return &Renderer{success: success, failure: failure, timeout: timeout}, nil
 }
 
 type templateData struct {
@@ -66,6 +71,22 @@ func (r *Renderer) Render(job *store.Job, run *ghclient.Run) (string, error) {
 	var sb strings.Builder
 	if err := tmpl.Execute(&sb, data); err != nil {
 		return "", fmt.Errorf("failed to render notify message: %w", err)
+	}
+	return sb.String(), nil
+}
+
+func (r *Renderer) RenderTimeout(job *store.Job) (string, error) {
+	data := templateData{
+		Requester: job.Requester,
+		Owner:     job.Owner,
+		Repo:      job.Repo,
+		RunID:     job.RunID,
+		RunURL:    fmt.Sprintf("https://github.com/%s/%s/actions/runs/%d", job.Owner, job.Repo, job.RunID),
+	}
+
+	var sb strings.Builder
+	if err := r.timeout.Execute(&sb, data); err != nil {
+		return "", fmt.Errorf("failed to render timeout message: %w", err)
 	}
 	return sb.String(), nil
 }
