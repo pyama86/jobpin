@@ -49,7 +49,7 @@ sequenceDiagram
 | `GITHUB_APP_ID` | ※ | - | GitHub App の App ID |
 | `GITHUB_APP_PRIVATE_KEY` | ※ | - | GitHub App の秘密鍵(PEM 本文)。`_PATH` とどちらか一方を指定 |
 | `GITHUB_APP_PRIVATE_KEY_PATH` | ※ | - | GitHub App の秘密鍵ファイルパス |
-| `DYNAMODB_TABLE` | | `jobpin` | テーブル名(無ければ自動作成) |
+| `DYNAMODB_TABLE` | | `jobpin` | テーブル名(権限があれば無い場合に自動作成) |
 | `DYNAMODB_ENDPOINT` | | - | DynamoDB Local 等のエンドポイント |
 | `POLL_INTERVAL` | | `30s` | 監視間隔 |
 | `WATCH_TTL` | | `168h` | 監視レコードの保持期間 |

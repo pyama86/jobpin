@@ -39,8 +39,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// DescribeTable/CreateTable権限がない環境(テーブルはTerraform等で管理)でも起動を継続する
 	if err := st.EnsureTable(ctx); err != nil {
-		return err
+		slog.Warn("failed to ensure table, assuming it is managed externally", "error", err)
 	}
 
 	gh, err := ghclient.New(cfg)
