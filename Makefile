@@ -16,7 +16,7 @@ lint:
 
 .PHONY: run
 run:
-	go run .
+	@set -a; [ -f .env ] && . ./.env; set +a; go run .
 
 .PHONY: up
 up:
