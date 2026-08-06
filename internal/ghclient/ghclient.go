@@ -34,9 +34,17 @@ func New(cfg *config.Config) (Client, error) {
 		return &tokenClient{client: gh}, nil
 	}
 
-	tr, err := ghinstallation.NewAppsTransportKeyFromFile(
-		http.DefaultTransport, cfg.GitHubAppID, cfg.GitHubAppPrivateKeyPath,
-	)
+	var tr *ghinstallation.AppsTransport
+	var err error
+	if cfg.GitHubAppPrivateKey != "" {
+		tr, err = ghinstallation.NewAppsTransport(
+			http.DefaultTransport, cfg.GitHubAppID, []byte(cfg.GitHubAppPrivateKey),
+		)
+	} else {
+		tr, err = ghinstallation.NewAppsTransportKeyFromFile(
+			http.DefaultTransport, cfg.GitHubAppID, cfg.GitHubAppPrivateKeyPath,
+		)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create apps transport: %w", err)
 	}

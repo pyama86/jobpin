@@ -24,6 +24,7 @@ func setupEnv(t *testing.T) {
 	unsetenv(t,
 		"GITHUB_TOKEN",
 		"GITHUB_APP_ID",
+		"GITHUB_APP_PRIVATE_KEY",
 		"GITHUB_APP_PRIVATE_KEY_PATH",
 		"DYNAMODB_TABLE",
 		"DYNAMODB_ENDPOINT",
@@ -61,6 +62,23 @@ func TestLoadWithGitHubApp(t *testing.T) {
 	}
 	if cfg.GitHubAppID != 12345 {
 		t.Errorf("GitHubAppID = %d, want 12345", cfg.GitHubAppID)
+	}
+}
+
+func TestLoadWithGitHubAppPrivateKeyBody(t *testing.T) {
+	setupEnv(t)
+	t.Setenv("GITHUB_APP_ID", "12345")
+	t.Setenv("GITHUB_APP_PRIVATE_KEY", "-----BEGIN RSA PRIVATE KEY-----\ndummy\n-----END RSA PRIVATE KEY-----")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.GitHubAppID != 12345 {
+		t.Errorf("GitHubAppID = %d, want 12345", cfg.GitHubAppID)
+	}
+	if cfg.GitHubAppPrivateKey == "" {
+		t.Error("GitHubAppPrivateKey should not be empty")
 	}
 }
 
