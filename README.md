@@ -73,9 +73,9 @@ Go の `text/template` 形式。使える変数: `.Requester` `.Owner` `.Repo` `
 
 ## Slack App の設定
 
-1. Socket Mode を有効化し App-Level Token(`connections:write`)を発行
-2. Bot Token Scopes: `app_mentions:read` `chat:write` `reactions:write`
-3. Event Subscriptions で `app_mention` を購読
+1. [Slack API: Your Apps](https://api.slack.com/apps) で「Create New App」→「From a manifest」を選び、[`slack-app-manifest.yml`](./slack-app-manifest.yml) を貼り付けて作成
+2. App-Level Token(`connections:write`)を発行して `SLACK_APP_TOKEN` に設定
+3. 「Install to Workspace」で発行される Bot User OAuth Token を `SLACK_BOT_TOKEN` に設定
 4. bot を対象チャンネルに招待
 
 ## 開発
