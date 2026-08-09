@@ -89,6 +89,25 @@ func (w *Watcher) checkJob(ctx context.Context, job *store.Job) {
 		return
 	}
 
+	if run.Conclusion == "cancelled" {
+		replacement, err := w.gh.FindReplacementRun(ctx, job.Owner, job.Repo, run)
+		if err != nil {
+			slog.Warn("failed to find replacement workflow run", "job", job.ID, "error", err)
+			return
+		}
+		if replacement != nil {
+			cancelledRunID := job.RunID
+			job.RunID = replacement.ID
+			if err := w.st.Put(ctx, job); err != nil {
+				job.RunID = cancelledRunID
+				slog.Warn("failed to switch watched workflow run", "job", job.ID, "run_id", replacement.ID, "error", err)
+				return
+			}
+			slog.Info("switched watched workflow run", "job", job.ID, "cancelled_run_id", cancelledRunID, "run_id", replacement.ID)
+			return
+		}
+	}
+
 	text, err := w.renderer.Render(job, run)
 	if err != nil {
 		slog.Warn("failed to render message", "job", job.ID, "error", err)
