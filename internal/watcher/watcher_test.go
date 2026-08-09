@@ -16,11 +16,20 @@ const testMaxWatchDuration = time.Hour
 
 type stubStore struct {
 	jobs          []*store.Job
+	putJob        *store.Job
+	putErr        error
 	updatedID     string
 	updatedStatus string
 }
 
-func (s *stubStore) Put(ctx context.Context, job *store.Job) error { return nil }
+func (s *stubStore) Put(ctx context.Context, job *store.Job) error {
+	if s.putErr != nil {
+		return s.putErr
+	}
+	copied := *job
+	s.putJob = &copied
+	return nil
+}
 
 func (s *stubStore) ListWatching(ctx context.Context) ([]*store.Job, error) {
 	return s.jobs, nil
@@ -33,12 +42,18 @@ func (s *stubStore) UpdateStatus(ctx context.Context, id, status string) error {
 }
 
 type stubGH struct {
-	run *ghclient.Run
-	err error
+	run            *ghclient.Run
+	err            error
+	replacement    *ghclient.Run
+	replacementErr error
 }
 
 func (g *stubGH) GetWorkflowRun(ctx context.Context, owner, repo string, runID int64) (*ghclient.Run, error) {
 	return g.run, g.err
+}
+
+func (g *stubGH) FindReplacementRun(ctx context.Context, owner, repo string, cancelled *ghclient.Run) (*ghclient.Run, error) {
+	return g.replacement, g.replacementErr
 }
 
 type stubPoster struct {
@@ -103,6 +118,80 @@ func TestCheckAllInProgress(t *testing.T) {
 	}
 	if st.updatedID != "" {
 		t.Errorf("expected no UpdateStatus, got %q", st.updatedID)
+	}
+}
+
+func TestCheckAllCancelledSwitchesToReplacementRun(t *testing.T) {
+	job := testJob()
+	st := &stubStore{jobs: []*store.Job{job}}
+	gh := &stubGH{
+		run:         &ghclient.Run{ID: 1, Status: "completed", Conclusion: "cancelled"},
+		replacement: &ghclient.Run{ID: 2, Status: "in_progress"},
+	}
+	poster := &stubPoster{}
+
+	newTestWatcher(t, st, gh, poster).checkAll(context.Background())
+
+	if st.putJob == nil || st.putJob.RunID != 2 {
+		t.Fatalf("expected watcher to persist replacement run 2, got %+v", st.putJob)
+	}
+	if len(poster.posted) != 0 {
+		t.Errorf("expected no posts, got %v", poster.posted)
+	}
+	if st.updatedID != "" {
+		t.Errorf("expected no UpdateStatus, got %q", st.updatedID)
+	}
+}
+
+func TestCheckAllCancelledWithoutReplacementNotifies(t *testing.T) {
+	st := &stubStore{jobs: []*store.Job{testJob()}}
+	gh := &stubGH{run: &ghclient.Run{ID: 1, Status: "completed", Conclusion: "cancelled"}}
+	poster := &stubPoster{}
+
+	newTestWatcher(t, st, gh, poster).checkAll(context.Background())
+
+	if len(poster.posted) != 1 {
+		t.Errorf("expected cancelled notification, got %v", poster.posted)
+	}
+	if st.updatedStatus != store.StatusNotified {
+		t.Errorf("expected UpdateStatus notified, got %q", st.updatedStatus)
+	}
+}
+
+func TestCheckAllReplacementLookupFailureRetries(t *testing.T) {
+	st := &stubStore{jobs: []*store.Job{testJob()}}
+	gh := &stubGH{
+		run:            &ghclient.Run{ID: 1, Status: "completed", Conclusion: "cancelled"},
+		replacementErr: errors.New("temporary network error"),
+	}
+	poster := &stubPoster{}
+
+	newTestWatcher(t, st, gh, poster).checkAll(context.Background())
+
+	if len(poster.posted) != 0 {
+		t.Errorf("expected no posts, got %v", poster.posted)
+	}
+	if st.updatedID != "" {
+		t.Errorf("expected no UpdateStatus, got %q", st.updatedID)
+	}
+}
+
+func TestCheckAllReplacementStoreFailureRetries(t *testing.T) {
+	job := testJob()
+	st := &stubStore{jobs: []*store.Job{job}, putErr: errors.New("dynamodb down")}
+	gh := &stubGH{
+		run:         &ghclient.Run{ID: 1, Status: "completed", Conclusion: "cancelled"},
+		replacement: &ghclient.Run{ID: 2, Status: "in_progress"},
+	}
+	poster := &stubPoster{}
+
+	newTestWatcher(t, st, gh, poster).checkAll(context.Background())
+
+	if job.RunID != 1 {
+		t.Errorf("expected in-memory run ID restored to 1, got %d", job.RunID)
+	}
+	if len(poster.posted) != 0 {
+		t.Errorf("expected no posts, got %v", poster.posted)
 	}
 }
 
