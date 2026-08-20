@@ -11,7 +11,7 @@ require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.19.0
 	github.com/google/go-github/v90 v90.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/slack-go/slack v0.27.0
+	github.com/slack-go/slack v0.29.0
 	golang.org/x/sync v0.22.0
 )
 
