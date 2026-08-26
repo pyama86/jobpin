@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pyama86/jobpin/internal/config"
@@ -25,8 +26,19 @@ type RunRef struct {
 	RunID int64
 }
 
+// runURLBodyPattern はrun URL部分のみのパターン。除去用の正規表現とDRYにするためcaptureありの本体だけを共有する
+const runURLBodyPattern = `https://github\.com/([^/\s]+)/([^/\s>|]+)/actions/runs/(\d+)`
+
 // Slackは本文中のURLを `<url>` や `<url|label>` で囲むため `>` `|` をrepo名から除外する
-var runURLRe = regexp.MustCompile(`https://github\.com/([^/\s]+)/([^/\s>|]+)/actions/runs/(\d+)`)
+var runURLRe = regexp.MustCompile(runURLBodyPattern)
+
+// run URLトークンを `<url>` `<url|label>` を含めて丸ごと除去するための正規表現
+var runURLTokenRe = regexp.MustCompile(`<?` + runURLBodyPattern + `(\|[^>]*)?>?`)
+
+// 本文先頭にある `<@...>` トークンを1つだけ除去するための正規表現(botUserID不明時のフォールバック用)
+var leadingMentionRe = regexp.MustCompile(`^\s*<@[^>]+>`)
+
+var whitespaceRe = regexp.MustCompile(`[ \t]+`)
 
 func parseRunURLs(text string) []RunRef {
 	var refs []RunRef
@@ -40,13 +52,34 @@ func parseRunURLs(text string) []RunRef {
 	return refs
 }
 
+// extractNote はメンション本文からbotへのメンションとrun URLを除いた残りの文字列を抽出する
+func extractNote(text, botUserID string) string {
+	text = removeBotMention(text, botUserID)
+	text = runURLTokenRe.ReplaceAllString(text, "")
+
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimSpace(whitespaceRe.ReplaceAllString(line, " "))
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
+func removeBotMention(text, botUserID string) string {
+	if botUserID == "" {
+		return leadingMentionRe.ReplaceAllString(text, "")
+	}
+	mentionRe := regexp.MustCompile(`<@` + regexp.QuoteMeta(botUserID) + `(\|[^>]*)?>`)
+	return mentionRe.ReplaceAllString(text, "")
+}
+
 type Bot struct {
-	cfg      *config.Config
-	st       store.Store
-	gh       ghclient.Client
-	renderer *notify.Renderer
-	api      *slack.Client
-	sm       *socketmode.Client
+	cfg       *config.Config
+	st        store.Store
+	gh        ghclient.Client
+	renderer  *notify.Renderer
+	api       *slack.Client
+	sm        *socketmode.Client
+	botUserID string
 }
 
 func New(cfg *config.Config, st store.Store, gh ghclient.Client, renderer *notify.Renderer) *Bot {
@@ -62,13 +95,20 @@ func New(cfg *config.Config, st store.Store, gh ghclient.Client, renderer *notif
 }
 
 func (b *Bot) Run(ctx context.Context) error {
+	resp, err := b.api.AuthTestContext(ctx)
+	if err != nil {
+		slog.Warn("failed to get bot user id", "error", err)
+	} else {
+		b.botUserID = resp.UserID
+	}
+
 	go func() {
 		for evt := range b.sm.Events {
 			b.handleEvent(ctx, &evt)
 		}
 	}()
 
-	err := b.sm.RunContext(ctx)
+	err = b.sm.RunContext(ctx)
 	if ctx.Err() != nil {
 		return nil
 	}
@@ -127,6 +167,7 @@ func (b *Bot) handleMention(ctx context.Context, mention *slackevents.AppMention
 			ThreadTS:  threadTS,
 			Requester: mention.User,
 			Status:    store.StatusWatching,
+			Note:      extractNote(mention.Text, b.botUserID),
 		}
 
 		if run.Status == "completed" {

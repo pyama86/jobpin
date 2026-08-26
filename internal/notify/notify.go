@@ -42,6 +42,7 @@ type templateData struct {
 	Status       string
 	Conclusion   string
 	Branch       string
+	Note         string
 }
 
 func (r *Renderer) Render(job *store.Job, run *ghclient.Run) (string, error) {
@@ -61,6 +62,7 @@ func (r *Renderer) Render(job *store.Job, run *ghclient.Run) (string, error) {
 		Status:       run.Status,
 		Conclusion:   run.Conclusion,
 		Branch:       run.Branch,
+		Note:         job.Note,
 	}
 
 	tmpl := r.failure
@@ -82,6 +84,7 @@ func (r *Renderer) RenderTimeout(job *store.Job) (string, error) {
 		Repo:      job.Repo,
 		RunID:     job.RunID,
 		RunURL:    fmt.Sprintf("https://github.com/%s/%s/actions/runs/%d", job.Owner, job.Repo, job.RunID),
+		Note:      job.Note,
 	}
 
 	var sb strings.Builder

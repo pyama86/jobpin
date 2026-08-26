@@ -60,3 +60,64 @@ func TestParseRunURLs(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractNote(t *testing.T) {
+	tests := []struct {
+		name      string
+		text      string
+		botUserID string
+		want      string
+	}{
+		{
+			name:      "URL only",
+			text:      "<@BOT123> <https://github.com/pyama86/jobpin/actions/runs/123>",
+			botUserID: "BOT123",
+			want:      "",
+		},
+		{
+			name:      "URL, mention and text",
+			text:      "<@BOT123> <https://github.com/pyama86/jobpin/actions/runs/123> <@U0HOGE> デプロイ完了しました",
+			botUserID: "BOT123",
+			want:      "<@U0HOGE> デプロイ完了しました",
+		},
+		{
+			name:      "URL with label",
+			text:      "<@BOT123> <https://github.com/pyama86/jobpin/actions/runs/123|CI run> よろしく",
+			botUserID: "BOT123",
+			want:      "よろしく",
+		},
+		{
+			name:      "multiple URLs",
+			text:      "<@BOT123> <https://github.com/a/b/actions/runs/1> と <https://github.com/c/d/actions/runs/2|run2> をお願いします",
+			botUserID: "BOT123",
+			want:      "と をお願いします",
+		},
+		{
+			name:      "empty botUserID falls back to leading mention",
+			text:      "<@BOT123> <https://github.com/pyama86/jobpin/actions/runs/123> デプロイ完了しました",
+			botUserID: "",
+			want:      "デプロイ完了しました",
+		},
+		{
+			name:      "text before URL",
+			text:      "<@BOT123> デプロイ完了 <https://github.com/pyama86/jobpin/actions/runs/123>",
+			botUserID: "BOT123",
+			want:      "デプロイ完了",
+		},
+		{
+			name:      "multiline",
+			text:      "<@BOT123> <https://github.com/pyama86/jobpin/actions/runs/123>\n<@U0HOGE>\nデプロイ完了しました\nよろしくお願いします",
+			botUserID: "BOT123",
+			want:      "<@U0HOGE>\nデプロイ完了しました\nよろしくお願いします",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractNote(tt.text, tt.botUserID)
+			if got != tt.want {
+				t.Errorf("extractNote(%q, %q) = %q, want %q", tt.text, tt.botUserID, got, tt.want)
+			}
+		})
+	}
+}
