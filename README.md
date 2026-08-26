@@ -13,6 +13,11 @@ Slack のチャンネルやスレッドで bot にメンションする。
 - 受け付けると 👀 リアクションが付き、run が完了したら結果をスレッドに通知する
 - すでに完了している run はその場で結果を返信する
 - 1メッセージに複数の run URL を含めてもよい
+- run URL 以外に書いた文字列(`<@U0HOGE>` のようなメンションも含む)は note として保存され、完了通知に引き継がれる
+
+```
+@jobpin https://github.com/owner/repo/actions/runs/123456789 <@U0HOGE> デプロイ完了しました
+```
 
 ## アーキテクチャ
 
@@ -65,21 +70,21 @@ AWS 認証は SDK 標準(`AWS_REGION`、`AWS_PROFILE`、IAM ロール等)に従�
 
 ### 通知テンプレート
 
-Go の `text/template` 形式。使える変数: `.Requester` `.Owner` `.Repo` `.RunID` `.RunURL` `.WorkflowName` `.RunNumber` `.Status` `.Conclusion` `.Branch`
+Go の `text/template` 形式。使える変数: `.Requester` `.Owner` `.Repo` `.RunID` `.RunURL` `.WorkflowName` `.RunNumber` `.Status` `.Conclusion` `.Branch` `.Note`
 
 デフォルト:
 
 ```
-成功: <@{{.Requester}}> :white_check_mark: *{{.WorkflowName}}* (#{{.RunNumber}}) が成功しました\n{{.RunURL}}
-失敗: <@{{.Requester}}> :x: *{{.WorkflowName}}* (#{{.RunNumber}}) が {{.Conclusion}} で終了しました\n{{.RunURL}}
+成功: <@{{.Requester}}> :white_check_mark: *{{.WorkflowName}}* (#{{.RunNumber}}) が成功しました\n{{.RunURL}}{{if .Note}}\n{{.Note}}{{end}}
+失敗: <@{{.Requester}}> :x: *{{.WorkflowName}}* (#{{.RunNumber}}) が {{.Conclusion}} で終了しました\n{{.RunURL}}{{if .Note}}\n{{.Note}}{{end}}
 ```
 
-監視打ち切り(`NOTIFY_TEMPLATE_TIMEOUT`)は使える変数が異なり、`.Requester` `.Owner` `.Repo` `.RunID` `.RunURL` のみ。
+監視打ち切り(`NOTIFY_TEMPLATE_TIMEOUT`)は使える変数が異なり、`.Requester` `.Owner` `.Repo` `.RunID` `.RunURL` `.Note` のみ。
 
 デフォルト:
 
 ```
-打ち切り: <@{{.Requester}}> :hourglass_flowing_sand: {{.RunURL}} は監視期限を超えたため打ち切りました
+打ち切り: <@{{.Requester}}> :hourglass_flowing_sand: {{.RunURL}} は監視期限を超えたため打ち切りました{{if .Note}}\n{{.Note}}{{end}}
 ```
 
 ## Slack App の設定

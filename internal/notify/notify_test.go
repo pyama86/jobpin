@@ -83,6 +83,77 @@ func TestRender(t *testing.T) {
 	})
 }
 
+func TestRenderNote(t *testing.T) {
+	r, err := NewRenderer(
+		"ok {{.RunURL}}{{if .Note}}\n{{.Note}}{{end}}",
+		"ng {{.RunURL}}{{if .Note}}\n{{.Note}}{{end}}",
+		"timeout {{.RunURL}}{{if .Note}}\n{{.Note}}{{end}}",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("with note", func(t *testing.T) {
+		job := &store.Job{
+			Owner: "pyama86",
+			Repo:  "jobpin",
+			RunID: 123,
+			Note:  "<@U0HOGE> デプロイ完了しました",
+		}
+		run := &ghclient.Run{
+			Status:     "completed",
+			Conclusion: "success",
+			HTMLURL:    "https://github.com/pyama86/jobpin/actions/runs/123",
+		}
+		got, err := r.Render(job, run)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := "ok https://github.com/pyama86/jobpin/actions/runs/123\n<@U0HOGE> デプロイ完了しました"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("without note", func(t *testing.T) {
+		job := &store.Job{
+			Owner: "pyama86",
+			Repo:  "jobpin",
+			RunID: 123,
+		}
+		run := &ghclient.Run{
+			Status:     "completed",
+			Conclusion: "success",
+			HTMLURL:    "https://github.com/pyama86/jobpin/actions/runs/123",
+		}
+		got, err := r.Render(job, run)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := "ok https://github.com/pyama86/jobpin/actions/runs/123"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("timeout with note", func(t *testing.T) {
+		job := &store.Job{
+			Owner: "pyama86",
+			Repo:  "jobpin",
+			RunID: 123,
+			Note:  "<@U0HOGE> デプロイ完了しました",
+		}
+		got, err := r.RenderTimeout(job)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := "timeout https://github.com/pyama86/jobpin/actions/runs/123\n<@U0HOGE> デプロイ完了しました"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
 func TestRenderTimeout(t *testing.T) {
 	r, err := NewRenderer(
 		"ok",

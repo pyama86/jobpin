@@ -19,6 +19,7 @@ type Job struct {
 	Channel   string    `dynamodbav:"channel"`
 	ThreadTS  string    `dynamodbav:"thread_ts"`
 	Requester string    `dynamodbav:"requester"`
+	Note      string    `dynamodbav:"note"`
 	Status    string    `dynamodbav:"status"`
 	CreatedAt time.Time `dynamodbav:"created_at"`
 	ExpiresAt int64     `dynamodbav:"expires_at"`

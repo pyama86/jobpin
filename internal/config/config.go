@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	defaultNotifyTemplateSuccess = "<@{{.Requester}}> :white_check_mark: *{{.WorkflowName}}* (#{{.RunNumber}}) が成功しました\n{{.RunURL}}"
-	defaultNotifyTemplateFailure = "<@{{.Requester}}> :x: *{{.WorkflowName}}* (#{{.RunNumber}}) が {{.Conclusion}} で終了しました\n{{.RunURL}}"
-	defaultNotifyTemplateTimeout = "<@{{.Requester}}> :hourglass_flowing_sand: {{.RunURL}} は監視期限を超えたため打ち切りました"
+	defaultNotifyTemplateSuccess = "<@{{.Requester}}> :white_check_mark: *{{.WorkflowName}}* (#{{.RunNumber}}) が成功しました\n{{.RunURL}}{{if .Note}}\n{{.Note}}{{end}}"
+	defaultNotifyTemplateFailure = "<@{{.Requester}}> :x: *{{.WorkflowName}}* (#{{.RunNumber}}) が {{.Conclusion}} で終了しました\n{{.RunURL}}{{if .Note}}\n{{.Note}}{{end}}"
+	defaultNotifyTemplateTimeout = "<@{{.Requester}}> :hourglass_flowing_sand: {{.RunURL}} は監視期限を超えたため打ち切りました{{if .Note}}\n{{.Note}}{{end}}"
 )
 
 type Config struct {
