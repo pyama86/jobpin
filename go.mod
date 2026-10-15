@@ -12,7 +12,7 @@ require (
 	github.com/google/go-github/v90 v90.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/slack-go/slack v0.30.1
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 )
 
 require (
