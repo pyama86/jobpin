@@ -3,7 +3,7 @@ module github.com/pyama86/jobpin
 go 1.26.1
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.47.1
+	github.com/aws/aws-sdk-go-v2 v1.47.3
 	github.com/aws/aws-sdk-go-v2/config v1.33.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.6
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.21.7
@@ -28,7 +28,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.38.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.1 // indirect
-	github.com/aws/smithy-go v1.28.1 // indirect
+	github.com/aws/smithy-go v1.28.5 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/google/go-github/v88 v88.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
